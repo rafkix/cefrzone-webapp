@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cefrzone Demo</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 0;
+            padding: 16px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        button {
+            padding: 10px 16px;
+            margin: 4px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            background: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+        }
+
+        .option {
+            width: 100%;
+            margin: 6px 0;
+        }
+
+        .big {
+            font-size: 40px;
+            font-weight: bold;
+            margin: 12px 0;
+        }
+
+        .muted {
+            color: var(--tg-theme-hint-color, #888888);
+            font-size: 14px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="counter" class="view">
+        <h3>Hisoblagich</h3>
+        <div class="big" id="counter-num">0</div>
+        <button id="c-inc">+1</button>
+        <button id="c-reset">Reset</button>
+    </div>
+
+    <div id="poll" class="view">
+        <h3>Python yoki JavaScript?</h3>
+        <button class="option" id="p-a">Python</button>
+        <button class="option" id="p-b">JavaScript</button>
+        <div id="p-result" class="muted"></div>
+    </div>
+
+    <div id="ticker" class="view">
+        <h3>TON narxi (demo)</h3>
+        <div class="big" id="t-price">$5.47</div>
+        <button id="t-refresh">Yangilash</button>
+    </div>
+
+    <div id="pay" class="view">
+        <h3>TON to'lov (demo)</h3>
+        <p>Summa: 0.01 TON</p>
+        <p class="muted" id="pay-address"></p>
+        <a id="pay-link" href="#"><button>Hamyonda ochish</button></a>
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
+
+        const params = new URLSearchParams(location.search);
+        const view = params.get("view") || "";
+
+        const target = document.getElementById(view);
+        if (target && target.classList.contains("view")) {
+            target.classList.add("active");
+        } else {
+            document.body.insertAdjacentHTML(
+                "beforeend",
+                "<p class='muted'>Botdan tugma orqali oching.</p>"
+            );
+        }
+
+        // Hisoblagich (brauzer xotirasida saqlanadi)
+        const countEl = document.getElementById("counter-num");
+        let count = Number(localStorage.getItem("counter") || 0);
+
+        function renderCount() {
+            countEl.textContent = count;
+        }
+
+        document.getElementById("c-inc").onclick = () => {
+            count++;
+            localStorage.setItem("counter", count);
+            renderCount();
+        };
+
+        document.getElementById("c-reset").onclick = () => {
+            count = 0;
+            localStorage.setItem("counter", count);
+            renderCount();
+        };
+
+        renderCount();
+
+        // So'rovnoma (faqat shu foydalanuvchi uchun, server yo'q)
+        let poll = JSON.parse(localStorage.getItem("poll") || '{"a":0,"b":0,"vote":null}');
+
+        function renderPoll() {
+            const total = Math.max(1, poll.a + poll.b);
+            const a = Math.round(poll.a * 100 / total);
+            const b = Math.round(poll.b * 100 / total);
+            document.getElementById("p-result").textContent =
+                `Python: ${a}% (${poll.a}) | JavaScript: ${b}% (${poll.b})`;
+        }
+
+        function vote(choice) {
+            if (poll.vote === choice) return;
+            if (poll.vote) poll[poll.vote]--;
+            poll[choice]++;
+            poll.vote = choice;
+            localStorage.setItem("poll", JSON.stringify(poll));
+            renderPoll();
+        }
+
+        document.getElementById("p-a").onclick = () => vote("a");
+        document.getElementById("p-b").onclick = () => vote("b");
+        renderPoll();
+
+        // TON narx (demo, tasodifiy o'zgaradi)
+        let price = 5.47;
+
+        function renderPrice() {
+            document.getElementById("t-price").textContent = "$" + price.toFixed(2);
+        }
+
+        document.getElementById("t-refresh").onclick = () => {
+            price = Math.max(0.1, price + (Math.random() * 0.1 - 0.05));
+            renderPrice();
+        };
+
+        renderPrice();
+
+        // TON to'lov (manzil botdan keladi)
+        const addr = params.get("addr") || "";
+        document.getElementById("pay-address").textContent = addr || "Manzil sozlanmagan";
+
+        if (addr) {
+            // 0.01 TON = 10000000 nanoton
+            document.getElementById("pay-link").href =
+                `ton://transfer/${addr}?amount=10000000`;
+        }
+    </script>
+</body>
+
+</html>
